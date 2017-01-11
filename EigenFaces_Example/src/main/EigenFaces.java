@@ -8,6 +8,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.concurrent.TimeUnit;
 
 import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
@@ -34,23 +35,41 @@ public class EigenFaces {
 		// TODO Auto-generated method stub
 		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
 		
-		learn("C:/Users/franc/git/EigenFaces_Example/EigenFaces_Example/pics");
+		//learn("C:/Users/franc/git/EigenFaces_Example/EigenFaces_Example/pics");
 		//learn("C:/Users/franc/OneDrive/Documents/University/Year 3/Final Year Project/pics/jpg");
-		//learn("C:/Users/Francis/git/EigenFaces_Example/EigenFaces_Example/pics");
-		show_image(eig_vec.row(80));
+		learn("C:/Users/Francis/git/EigenFaces_Example/EigenFaces_Example/pics");
+		//show_image(eig_vec.row(5));
+		//show_image(imagesMat.row(5));
+		show_images(eig_vec);
 		
+	}
+	
+	private static void show_images(Mat images)
+	{
+		int rows = images.rows();
+		
+		for(int i = 0; i < rows; i++)
+		{
+			show_image(images.row(i));		
+			try {
+				TimeUnit.SECONDS.sleep(1);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
 	}
 	
 	private static void show_image(Mat image)
 	{
 		if(image.rows() != 1 && image.cols() != (300 * 250))
 		{
-			System.err.println("Size of image incorrect");
+			//System.err.println("Size of image incorrect");
 		}
 		
-		Mat pic = image.reshape(1, 250);
+		Mat pic = image.reshape(1, 300);
 		
-		System.out.println(pic);
+		//System.out.println(pic);
 		
 		BufferedImage bImage = Mat2BufferedImage(pic);
 		
@@ -61,18 +80,22 @@ public class EigenFaces {
 	{
 		Mat final_img = new Mat();
 		
-		m.copyTo(final_img);
+		Core.convertScaleAbs(m, final_img);
 		
-		System.out.println(final_img.submat(0, 5, 0, 5).dump());
+		//m.copyTo(final_img);
 		
-		output_matrix(final_img, "final_img.txt");
 		
+		
+		//System.out.println(final_img.submat(0, 5, 0, 5).dump());
+		
+		//output_matrix(final_img, "final_img.txt");
+		/*
 		if(final_img.type() != CvType.CV_8U)
 		{
 			final_img.convertTo(final_img, CvType.CV_8U);
 		}
-		
-		System.out.println(final_img.submat(0, 5, 0, 5).dump());
+		*/
+		//System.out.println(final_img.submat(0, 5, 0, 5).dump());
 		
 		int type = BufferedImage.TYPE_BYTE_GRAY;
 	    if ( final_img.channels() > 1 ) {
@@ -144,7 +167,7 @@ public class EigenFaces {
 			
 		}
 		
-		output_matrix(eig_vec, "eig_vec.txt");
+		//output_matrix(eig_vec.row(0), "eig_vec.txt");
 		
 		System.out.println("Done");
 		
@@ -157,6 +180,8 @@ public class EigenFaces {
 		
 		Core.subtract(image, avg, copy);
 		
+		//System.out.println(copy.dump());
+		
 		int rows = eig_vec2.rows();
 		
 		Mat face = Mat.zeros(rows, 1, eig_vec2.type());
@@ -164,6 +189,8 @@ public class EigenFaces {
 		for(int i = 0; i < rows; i++)
 		{
 			double dotproduct = eig_vec2.row(i).dot(copy);
+			
+			//System.out.println(dotproduct);
 			
 			face.put(i, 0, dotproduct);
 		}
@@ -175,7 +202,7 @@ public class EigenFaces {
 		
 		return face;
 	}
-
+/*
 	private static ArrayList<Mat> read_images(String pathname)
 	{
 		ArrayList<Mat> images = new ArrayList<>();
@@ -208,7 +235,7 @@ public class EigenFaces {
 		
 		return images;
 	}
-	
+	*/
 	private static Mat read_images_mat(String pathname)
 	{
 		Mat imagesMat = null;
@@ -222,7 +249,11 @@ public class EigenFaces {
 		for (File file : files) {
 			//System.out.println(file.toString());
 			
-			Mat image = Imgcodecs.imread(file.toString());
+			Mat image = Imgcodecs.imread(file.toString(), Imgcodecs.IMREAD_GRAYSCALE);
+			
+			System.out.println(image);
+			
+			//show_image(image);
 			
 			if(image.channels() > 1)
 			{
@@ -254,7 +285,7 @@ public class EigenFaces {
 			imagesMat.put(row, 0, data);
 			
 			//output_matrix(imagesMat, "imagesMat.txt");
-			
+			//show_image(imagesMat.row(row));
 			
 			//images.add(image);
 			row++;
@@ -369,12 +400,12 @@ public class EigenFaces {
 		copy = images.t();
 		Core.calcCovarMatrix(copy, covar, mean, Core.COVAR_COLS, images.type());
 		
-		output_matrix(covar, "covar.txt");
+		//output_matrix(covar, "covar.txt");
 		
 		Core.eigen(covar, snap_val, snap_vec);
 		
-		output_matrix(snap_val, "snap_val.txt");
-		output_matrix(snap_vec, "snap_vec.txt");
+		//output_matrix(snap_val, "snap_val.txt");
+		//output_matrix(snap_vec, "snap_vec.txt");
 		
 		eig_vec = Mat.zeros(rows, cols, images.type());
 		Mat eig_temp = new Mat(rows, cols, images.type());
@@ -386,12 +417,21 @@ public class EigenFaces {
 			{
 				Mat temp = new Mat();
 				Core.multiply(images.row(j), new Scalar(snap_vec.get(j, i)), temp);
+				
+				//System.out.println("multiplying by " + snap_vec.get(j, i)[0]);
+				
+				//output_matrix(temp, "temp.txt");
+				
 				Core.add(row, temp, row);
+				
+				//output_matrix(row, "row.txt");
 			}
 			
 			double[] data = new double[(int) (rows * cols)];
 			
 			//System.out.println(data.length);
+			
+			//output_matrix(row, "row.txt");
 			
 			row.get(0, 0, data);
 			
@@ -400,7 +440,12 @@ public class EigenFaces {
 		
 		eig_val = snap_val.diag();
 		
-		eig_vec = normalise(eig_temp);
+		 
+		Mat newmat = normalise(eig_temp);
+		
+		newmat.copyTo(eig_vec);
+		
+		//System.out.println(eig_vec.row(0).dump());
 		
 		newEigens = true;
 	}
@@ -420,11 +465,15 @@ public class EigenFaces {
 			
 			Mat normRow = new Mat();
 			
-			Core.normalize(row, normRow);
+			double normdouble = Core.norm(row, Core.NORM_L2);
 			
-			//System.out.println("normRow:\n" + normRow.dump());
+			//System.out.println("normRow: " + normRow.dump());
 			
-			Core.divide(row, normRow, row);
+			// Why do we do this? it ruins the data
+			//Core.divide(row, normdouble, row);
+			Core.divide(normdouble, row, row);
+			
+			//System.out.println("row: " + row.dump());
 			
 			//append row into new matrix
 			double[] data = new double[(int) (rows * cols)];
@@ -435,7 +484,7 @@ public class EigenFaces {
 			
 			//output_matrix(norm, "norm_" + i +".txt");
 		}
-		System.out.println(norm);
+		//System.out.println(norm);
 		//output_matrix(norm, "norm.txt");
 		
 		return norm;
