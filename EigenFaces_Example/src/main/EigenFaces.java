@@ -1,5 +1,7 @@
 package main;
 
+import java.awt.FlowLayout;
+import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
 import java.io.File;
@@ -8,6 +10,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 import javax.imageio.ImageIO;
+import javax.swing.ImageIcon;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
 
 import org.opencv.core.Mat;
 import org.opencv.core.Scalar;
@@ -22,19 +27,90 @@ public class EigenFaces {
 	private static Mat eig_vec;
 	private static Mat eig_val;
 	
+	private static Mat imagesMat;
+	private static Mat faces;
+	
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
 		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
 		
+		learn("C:/Users/franc/git/EigenFaces_Example/EigenFaces_Example/pics");
 		//learn("C:/Users/franc/OneDrive/Documents/University/Year 3/Final Year Project/pics/jpg");
-		learn("C:/Users/Francis/git/EigenFaces_Example/EigenFaces_Example/pics");
+		//learn("C:/Users/Francis/git/EigenFaces_Example/EigenFaces_Example/pics");
+		show_image(eig_vec.row(80));
+		
 	}
+	
+	private static void show_image(Mat image)
+	{
+		if(image.rows() != 1 && image.cols() != (300 * 250))
+		{
+			System.err.println("Size of image incorrect");
+		}
+		
+		Mat pic = image.reshape(1, 250);
+		
+		System.out.println(pic);
+		
+		BufferedImage bImage = Mat2BufferedImage(pic);
+		
+		displayImage(bImage);
+	}
+	
+	private static BufferedImage Mat2BufferedImage(Mat m)
+	{
+		Mat final_img = new Mat();
+		
+		m.copyTo(final_img);
+		
+		System.out.println(final_img.submat(0, 5, 0, 5).dump());
+		
+		output_matrix(final_img, "final_img.txt");
+		
+		if(final_img.type() != CvType.CV_8U)
+		{
+			final_img.convertTo(final_img, CvType.CV_8U);
+		}
+		
+		System.out.println(final_img.submat(0, 5, 0, 5).dump());
+		
+		int type = BufferedImage.TYPE_BYTE_GRAY;
+	    if ( final_img.channels() > 1 ) {
+	        type = BufferedImage.TYPE_3BYTE_BGR;
+	    }
+	    
+	    //System.out.println("Rows:" + final_img.rows() + ", \ncols: " + final_img.cols() + ", \nchannels: " + final_img.channels() + ",\ntotal: " + final_img.total());
+	    
+	    int bufferSize = final_img.channels()*final_img.cols()*final_img.rows();
+	    byte [] b = new byte[bufferSize];
+	    final_img.get(0,0,b); // get all the pixels
+	    BufferedImage image = new BufferedImage(final_img.cols(),final_img.rows(), type);
+	    final byte[] targetPixels = ((DataBufferByte) image.getRaster().getDataBuffer()).getData();
+	    
+	    System.arraycopy(b, 0, targetPixels, 0, b.length);  
+	    return image;
+	}
+	
+	 public static void displayImage(Image img2)
+	 {   
+	     //BufferedImage img=ImageIO.read(new File("/HelloOpenCV/lena.png"));
+	     ImageIcon icon=new ImageIcon(img2);
+	     JFrame frame=new JFrame();
+	     frame.setLayout(new FlowLayout());        
+	     frame.setSize(img2.getWidth(null)+50, img2.getHeight(null)+50);     
+	     JLabel lbl=new JLabel();
+	     lbl.setIcon(icon);
+	     frame.add(lbl);
+	     frame.setVisible(true);
+	     frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+	 }
 	
 	private static void learn(String pathname)
 	{
 		//Mat testmat = new Mat();
 		
-		Mat imagesMat = new Mat();
+		imagesMat = new Mat();
 		
 		//System.out.println("Reading images");
 		//ArrayList<Mat> images = read_images(pathname);
@@ -52,13 +128,52 @@ public class EigenFaces {
 		eigen_images(imagesMat);
 		//Core.eigen(avg, evalues, evectors);
 		
+		faces = new Mat();
+		
 		for(int i = 0; i < imagesMat.rows(); i++)
 		{
+			Mat column  = image2face(imagesMat.row(i), avg, eig_vec);
+			
+			double[] data = new double[(int) (column.rows() * column.cols())];
+			
+			//System.out.println(data.length);
+			
+			column.get(0, 0, data);
+			
+			faces.put(i, 0, data);
 			
 		}
 		
+		output_matrix(eig_vec, "eig_vec.txt");
+		
 		System.out.println("Done");
 		
+	}
+
+	private static Mat image2face(Mat image, Mat avg, Mat eig_vec2) {
+		// TODO Auto-generated method stub
+		
+		Mat copy = new Mat();
+		
+		Core.subtract(image, avg, copy);
+		
+		int rows = eig_vec2.rows();
+		
+		Mat face = Mat.zeros(rows, 1, eig_vec2.type());
+		
+		for(int i = 0; i < rows; i++)
+		{
+			double dotproduct = eig_vec2.row(i).dot(copy);
+			
+			face.put(i, 0, dotproduct);
+		}
+		
+		if(face.cols() != 1)
+		{
+			System.err.println("Face not a row vector");
+		}
+		
+		return face;
 	}
 
 	private static ArrayList<Mat> read_images(String pathname)
