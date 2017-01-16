@@ -35,9 +35,9 @@ public class EigenFaces {
 		// TODO Auto-generated method stub
 		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
 		
-		//learn("C:/Users/franc/git/EigenFaces_Example/EigenFaces_Example/pics");
+		learn("C:/Users/franc/git/EigenFaces_Example/EigenFaces_Example/pics");
 		//learn("C:/Users/franc/OneDrive/Documents/University/Year 3/Final Year Project/pics/jpg");
-		learn("C:/Users/Francis/git/EigenFaces_Example/EigenFaces_Example/pics");
+		//learn("C:/Users/Francis/git/EigenFaces_Example/EigenFaces_Example/pics");
 		//show_image(eig_vec.row(5));
 		//show_image(imagesMat.row(5));
 		show_images(eig_vec);
@@ -80,21 +80,21 @@ public class EigenFaces {
 	{
 		Mat final_img = new Mat();
 		
-		Core.convertScaleAbs(m, final_img);
+		//Core.convertScaleAbs(m, final_img);
 		
-		//m.copyTo(final_img);
+		m.copyTo(final_img);
 		
 		
 		
 		//System.out.println(final_img.submat(0, 5, 0, 5).dump());
 		
 		//output_matrix(final_img, "final_img.txt");
-		/*
+		
 		if(final_img.type() != CvType.CV_8U)
 		{
 			final_img.convertTo(final_img, CvType.CV_8U);
 		}
-		*/
+		
 		//System.out.println(final_img.submat(0, 5, 0, 5).dump());
 		
 		int type = BufferedImage.TYPE_BYTE_GRAY;
@@ -296,21 +296,6 @@ public class EigenFaces {
 		return imagesMat;
 	}
 	
-	private static Mat mean_image(ArrayList<Mat> images)
-	{
-		Mat sum = new Mat(images.get(0).rows(), images.get(0).cols(), CvType.CV_64FC1);
-		
-		for (Mat mat : images) {
-			Core.add(mat, sum, sum);
-		}
-		
-		Mat avg = mean_image(images);
-		
-		Core.divide(images.size(), sum, avg);
-		
-		return avg;
-	}
-	
 	private static Mat mean_image_mat(Mat imagesMat)
 	{
 		imagesMat.convertTo(imagesMat, CvType.CV_64FC1);
@@ -463,14 +448,12 @@ public class EigenFaces {
 			
 			//System.out.println(row.dump());
 			
-			Mat normRow = new Mat();
+			//Core.normalize(row, row);
 			
 			double normdouble = Core.norm(row, Core.NORM_L2);
 			
 			//System.out.println("normRow: " + normRow.dump());
 			
-			// Why do we do this? it ruins the data
-			//Core.divide(row, normdouble, row);
 			Core.divide(normdouble, row, row);
 			
 			//System.out.println("row: " + row.dump());
