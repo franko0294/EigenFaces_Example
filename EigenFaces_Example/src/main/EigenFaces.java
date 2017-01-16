@@ -503,8 +503,6 @@ public class EigenFaces {
 			
 			//System.out.println(row.dump());
 			
-			Mat normRow = new Mat();
-			
 			double normdouble = Core.norm(row, Core.NORM_L2);
 			
 			//System.out.println(normdouble);
