@@ -4,9 +4,11 @@ import java.awt.FlowLayout;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 
@@ -16,7 +18,9 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfByte;
 import org.opencv.core.Scalar;
+import org.opencv.core.Core.MinMaxLocResult;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.imgcodecs.Imgcodecs;
@@ -78,23 +82,42 @@ public class EigenFaces {
 	
 	private static BufferedImage Mat2BufferedImage(Mat m)
 	{
+		
+		// Images need to be converted to fit a valid scale between 0 and 255, as we cant show images with negatives or massive numbers
+		double newMax = 255;
+		double newMin = 0;
+		double newRange = newMax - newMin;
+		
 		Mat final_img = new Mat();
+		Mat temp = new Mat();
 		
-		Core.convertScaleAbs(m, final_img);
+		MinMaxLocResult minmax = Core.minMaxLoc(m);
 		
+		double oldMax = minmax.maxVal;
+		double oldMin = minmax.minVal;
+		double oldRange = oldMax - oldMin;
+		
+		Core.subtract(m, new Scalar(oldMin), temp);
+		
+		Core.multiply(temp, new Scalar(newRange), temp);
+		
+		Core.divide(temp, new Scalar(oldRange), temp);
+		
+		Core.add(temp, new Scalar(newMin), final_img);
+		
+		//Core.convertScaleAbs(m, final_img);
+		
+		minmax = Core.minMaxLoc(final_img);
+		System.out.println("Max: " + minmax.maxVal + ", min: " + minmax.minVal);
 		//m.copyTo(final_img);
 		
-		
-		
-		//System.out.println(final_img.submat(0, 5, 0, 5).dump());
-		
 		//output_matrix(final_img, "final_img.txt");
-		/*
+		
 		if(final_img.type() != CvType.CV_8U)
 		{
 			final_img.convertTo(final_img, CvType.CV_8U);
 		}
-		*/
+		
 		//System.out.println(final_img.submat(0, 5, 0, 5).dump());
 		
 		int type = BufferedImage.TYPE_BYTE_GRAY;
@@ -106,16 +129,38 @@ public class EigenFaces {
 	    
 	    int bufferSize = final_img.channels()*final_img.cols()*final_img.rows();
 	    byte [] b = new byte[bufferSize];
+	    //double [] b = new double[bufferSize];
 	    final_img.get(0,0,b); // get all the pixels
-	    BufferedImage image = new BufferedImage(final_img.cols(),final_img.rows(), type);
+	    BufferedImage image = new BufferedImage(m.cols(),m.rows(), type);
 	    final byte[] targetPixels = ((DataBufferByte) image.getRaster().getDataBuffer()).getData();
 	    
 	    System.arraycopy(b, 0, targetPixels, 0, b.length);  
 	    return image;
 	}
 	
-	 public static void displayImage(Image img2)
-	 {   
+	private static BufferedImage Mat2BufferedImage2(Mat m)
+	{		
+		Mat image_tmp = m;
+		
+		MatOfByte matOfByte = new MatOfByte();
+
+	    Imgcodecs.imencode(".jpg", image_tmp, matOfByte); 
+	    
+	    byte[] byteArray = matOfByte.toArray();
+	    BufferedImage bufImage = null;
+
+	    try {
+	        InputStream in = new ByteArrayInputStream(byteArray);
+	        bufImage = ImageIO.read(in);
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	    }
+	    
+	    return bufImage;
+	}
+	
+	public static void displayImage(Image img2)
+	{   
 	     //BufferedImage img=ImageIO.read(new File("/HelloOpenCV/lena.png"));
 	     ImageIcon icon=new ImageIcon(img2);
 	     JFrame frame=new JFrame();
@@ -127,7 +172,7 @@ public class EigenFaces {
 	     frame.setVisible(true);
 	     frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-	 }
+	}
 	
 	private static void learn(String pathname)
 	{
@@ -169,7 +214,7 @@ public class EigenFaces {
 		
 		//output_matrix(eig_vec.row(0), "eig_vec.txt");
 		
-		System.out.println("Done");
+		System.out.println("Done learning");
 		
 	}
 
@@ -396,16 +441,11 @@ public class EigenFaces {
 		
 		int rows = images.rows();
 		int cols = images.cols();
+		Mat quickCovar = new Mat();
 		
-		copy = images.t();
-		Core.calcCovarMatrix(copy, covar, mean, Core.COVAR_COLS, images.type());
+		Core.mulTransposed(images, quickCovar, false);
 		
-		//output_matrix(covar, "covar.txt");
-		
-		Core.eigen(covar, snap_val, snap_vec);
-		
-		//output_matrix(snap_val, "snap_val.txt");
-		//output_matrix(snap_vec, "snap_vec.txt");
+		Core.eigen(quickCovar, snap_val, snap_vec);
 		
 		eig_vec = Mat.zeros(rows, cols, images.type());
 		Mat eig_temp = new Mat(rows, cols, images.type());
@@ -467,13 +507,9 @@ public class EigenFaces {
 			
 			double normdouble = Core.norm(row, Core.NORM_L2);
 			
-			//System.out.println("normRow: " + normRow.dump());
+			//System.out.println(normdouble);
 			
-			// Why do we do this? it ruins the data
-			//Core.divide(row, normdouble, row);
-			Core.divide(normdouble, row, row);
-			
-			//System.out.println("row: " + row.dump());
+			Core.divide(row, new Scalar(normdouble), row);
 			
 			//append row into new matrix
 			double[] data = new double[(int) (rows * cols)];
